@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="Bbs">
+	<!-- 페이지 당 10개의 게시물을 보여주도록 LIMIT을 사용하여 페이징 처리 -->
+	<!-- 
+	<select id="getBbsList" resultType="mul.cam.a.dto.BbsDto">
+		SELECT * FROM bbs ORDER BY seq DESC
+	</select>  -->
+
+	<insert id="writeBbs" parameterType="mul.cam.a.dto.BbsDto">
+		INSERT INTO bbs
+		(id, title, content, wdate)
+		VALUES
+		(#{id}, #{title}, #{content}, NOW())
+	</insert>
+
+<select id="getBbsList" parameterType="mul.cam.a.dto.BbsParam" resultType="mul.cam.a.dto.BbsDto">
+  SELECT seq, id, ref, step, depth, title, content, wdate, del, readcount
+  FROM (
+    SELECT ROW_NUMBER() OVER (ORDER BY ref DESC, step ASC) AS rnum, seq, id, ref, step, depth, title, content, wdate, del, readcount 
+    FROM bbs
+    <if test="choice != null and choice != '' and search != null and search != '' ">
+      WHERE del = 0
+      <if test="choice == 'title'">
+        AND title LIKE CONCAT('%', #{search}, '%')
+      </if>
+      <if test="choice == 'content'">
+        AND content LIKE CONCAT('%', #{search}, '%')
+      </if>
+      <if test="choice == 'writer'">
+        AND id = #{search}
+      </if>
+    </if>
+  ) a
+  WHERE rnum BETWEEN ${start} AND ${end} 
+  ORDER BY ref DESC, step ASC
+</select>
+
+	<!--  글의 총수 -->
+<select id ="getAllBbs" parameterType="mul.cam.a.dto.BbsParam" resultType="java.lang.Integer">
+    select ifnull(count(*), 0)
+    from bbs
+    <if test="choice != null and choice != '' and search != null and search != '' ">
+        <if test="choice == 'title'">
+            where title like concat('%', #{search}, '%')
+        </if>
+        <if test="choice == 'content'">
+            where content like concat('%', #{search}, '%')
+        </if>
+        <if test="choice == 'writer'">
+            where id=#{search}
+        </if>
+    </if>
+</select>
+
+<select id="getBbs" resultType="mul.cam.a.dto.BbsDto" parameterType="java.lang.Integer">
+    SELECT SEQ, ID, REF, STEP, DEPTH, TITLE, CONTENT, WDATE, READCOUNT
+    FROM BBS
+    WHERE SEQ = #{seq}
+</select>
+
+<update id="readCount" parameterType="java.lang.Integer">
+    UPDATE BBS
+    SET READCOUNT = READCOUNT + 1
+    WHERE SEQ = #{seq}
+</update>
+
+<update id="updateBbs" parameterType="mul.cam.a.dto.BbsDto">
+    update bbs
+    set title = #{title},
+        content = #{content},
+        wdate = now()
+    where seq = #{seq}
+</update>
+</mapper>
+
+
+
